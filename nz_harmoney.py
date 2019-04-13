@@ -154,9 +154,9 @@ def update_cache():
     f = open(rel_path, 'w+')
     for i in range(len(seen_loan_ids)):
         if i + 1 == len(seen_loan_ids):
-            f.write(seen_loan_ids[i])
+            f.write(str(seen_loan_ids[i]))
         else:
-            f.write(seen_loan_ids[i] + ",")
+            f.write(str(seen_loan_ids[i]) + ",")
 
     f.close()
     pass
