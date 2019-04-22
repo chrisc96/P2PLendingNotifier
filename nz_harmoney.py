@@ -16,7 +16,7 @@ args.harmoney_email = str(args.harmoney_email)
 args.harmoney_pwd = str(args.harmoney_pwd)
 
 # ALG_VARS
-period = 20.0  # Called every 20 seconds
+period = 5.0  # Called every 5 seconds
 seen_loan_ids = []
 threads = []
 
@@ -109,7 +109,6 @@ def check_for_new_loans(response):
     loan_not_seen_before = False
     for loan in response['items']:
         if loan['id'] not in seen_loan_ids:
-            print("New Loan Available - Sending Email")
             seen_loan_ids.append(loan['id'])
             loan_not_seen_before = True
 
@@ -127,6 +126,7 @@ def job():
         loan_not_seen_before = check_for_new_loans(response)
 
         if loan_not_seen_before:
+            print("Sending Email at", datetime.datetime.today())
             send_email()
 
     # Remove old loans
