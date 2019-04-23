@@ -89,7 +89,7 @@ def send_email():
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
             "from": "Lending Crowd - New Loan Notifier <lendingcrowd@p2pnotifications.live>",
-            "to": ["testing@p2pnotifications.live"],
+            "to": ["lendingcrowd@p2pnotifications.live"],
             "subject": "New Loan Available on Lending Crowd",
             "text": "Go to https://lendingcrowd.co.nz, there are new loans available"
         }
