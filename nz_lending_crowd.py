@@ -1,33 +1,27 @@
-import argparse
 import datetime
 import json
-import threading
 
 import requests
-import schedule
 
-# CLI Parsing
-parser = argparse.ArgumentParser(description='Provide credentials to connect to LendingCrowd')
-parser.add_argument('--lc_email', help='The email address you use to login to LendingCrowd')
-parser.add_argument('--lc_password', help='The password you use to login to LendingCrowd')
-args = parser.parse_args()
+import cacheing
+import creds_parser
+import scheduler
 
-args.lc_email = str(args.lc_email)
-args.lc_password = str(args.lc_password)
+lc_email = lc_password = ""
 
 # ALG_VARS
+period = 5.0  # Called every 5 seconds
 seen_loan_ids = []
-period = 5.0  # every 5 seconds
-threads = []
 
 # CACHE STORAGE
 rel_path = "./cache/nz_lending_crowd.txt"
+service_name = "LendingCrowd"
 
 
 def send_auth_req():
     sign_in_url = "https://lendingcrowd.co.nz/user/signin"
-    sign_in_payload = "{\n\t\"userName\":\"" + args.lc_email + "\",\n\t\"password\":\"" + args.lc_password + "\"," \
-                                                                                                             "\n\t\"recaptchaResponseToken\":\"_lc\"\n} "
+    sign_in_payload = "{\n\t\"userName\":\"" + lc_email + "\",\n\t\"password\":\"" + lc_password + "\"," \
+                      "\n\t\"recaptchaResponseToken\":\"_lc\"\n} "
     sign_in_headers = {
         'cookie': "Lc=s6Mt93N0n8t875ge3mRk3gAs5HSBhdJbavtjB1bvC3uxvc5rAoYm5yuRdkPewd5Tmia4PwQi0VCPKEwe47paGz"
                   "-gYgl3mrwVbdk0cXX2YvFlZbfL1jeVK3fOeQjiMM0DyDjpjKkHRb--Be1BC_1XIQC5okA1;",
@@ -89,7 +83,7 @@ def send_email():
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
             "from": "Lending Crowd - New Loan Notifier <lendingcrowd@p2pnotifications.live>",
-            "to": ["lendingcrowd@p2pnotifications.live"],
+            "to": ["testing@p2pnotifications.live"],
             "subject": "New Loan Available on Lending Crowd",
             "text": "Go to https://lendingcrowd.co.nz, there are new loans available"
         }
@@ -99,9 +93,13 @@ def send_email():
 # TASK TO RETRIEVE NEW LOANS RUN EVERY MINUTE
 def get_loans():
     response = send_auth_req()
-    c = response.cookies  # RETRIEVE COOKIES INSIDE RESPONSE
+
+    lc_down = response.status_code == 404
+    if lc_down:
+        exit(0)
 
     # USE COOKIE RESPONSE IN NEW REQUEST AS TOKEN
+    c = response.cookies  # RETRIEVE COOKIES INSIDE RESPONSE
     response = send_loan_query(c)
     json_resp = json.loads(response.text)
 
@@ -141,7 +139,7 @@ def remove_old_loans(response):
 
 
 def job():
-    print('Running Job. Current DateTime:', datetime.datetime.today())
+    print("Running", service_name, "Job. Current DateTime:", datetime.datetime.today())
 
     response = get_loans()
     num_loans = response['obj']['totalRecordCount']
@@ -150,70 +148,24 @@ def job():
         loan_not_seen_before = check_for_new_loans(response)
 
         if loan_not_seen_before:
-            print("Sending Email at", datetime.datetime.today())
+            print("Sending", service_name, "email at", datetime.datetime.today())
+            print(response)
             send_email()
 
     # Remove old loans
     remove_old_loans(response)
-    update_cache()
+    cacheing.update_cache()
 
 
-# Create on separate thread so clock timed process not altered
-def run_job_in_thread(job_to_run):
-    job_thread = threading.Thread(target=job_to_run)
-    job_thread.setDaemon(True)  # exit when main program exits, regardless of state
-    job_thread.start()
-
-
-def schedule_tasks():
-    schedule.every(period).seconds.do(run_job_in_thread, job)
-
-
-def execute_tasks():
-    while True:
-        schedule.run_pending()
-
-
-def update_cache():
-    f = open(rel_path, 'w+')
-    for i in range(len(seen_loan_ids)):
-        if i + 1 == len(seen_loan_ids):
-            f.write(str(seen_loan_ids[i]))
-        else:
-            f.write(str(seen_loan_ids[i]) + ",")
-
-    f.close()
-
-
-# Create file if loan cache doesn't exist
-def load_from_cache():
-    f = open(rel_path, 'a+')
-    f.seek(0)
-
-    loan_ids = []
-    if f.read() != '':
-        f.seek(0)
-        for loan_id in f.read().split(','):
-            loan_ids.append(int(loan_id))
-
-    f.close()
-    return loan_ids
-
-
-def init_cache():
-    print("Loading Cache")
+def init():
+    print("Initialising", service_name, "Script")
     global seen_loan_ids
-    seen_loan_ids = load_from_cache()
-    print(seen_loan_ids)
-    print("Done.")
+    seen_loan_ids = cacheing.init_cache(rel_path)
 
+    # Load credentials into memory
+    global lc_email, lc_password
+    lc_email, lc_password = creds_parser.get_credentials_by(service_name)
+    print("Finished Initialising", service_name, "Script")
 
-def main():
-    init_cache()
-
-    print('Starting Script')
-    schedule_tasks()
-    execute_tasks()
-
-
-main()
+    # Schedule tasks
+    scheduler.schedule_tasks(period, job)

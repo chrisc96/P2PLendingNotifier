@@ -105,3 +105,6 @@ venv.bak/
 
 .idea/
 cache/
+
+LoanNotificationsPayments.xlsx
+credentials.txt
