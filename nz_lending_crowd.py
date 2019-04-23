@@ -16,16 +16,18 @@ args.lc_email = str(args.lc_email)
 args.lc_password = str(args.lc_password)
 
 # ALG_VARS
-loans_ids = []
-req_execution_times = []
-timeout = 30.0  # Sixty seconds
+seen_loan_ids = []
+period = 5.0  # every 5 seconds
 threads = []
+
+# CACHE STORAGE
+rel_path = "./cache/nz_lending_crowd.txt"
 
 
 def send_auth_req():
     sign_in_url = "https://lendingcrowd.co.nz/user/signin"
     sign_in_payload = "{\n\t\"userName\":\"" + args.lc_email + "\",\n\t\"password\":\"" + args.lc_password + "\"," \
-                      "\n\t\"recaptchaResponseToken\":\"_lc\"\n} "
+                                                                                                             "\n\t\"recaptchaResponseToken\":\"_lc\"\n} "
     sign_in_headers = {
         'cookie': "Lc=s6Mt93N0n8t875ge3mRk3gAs5HSBhdJbavtjB1bvC3uxvc5rAoYm5yuRdkPewd5Tmia4PwQi0VCPKEwe47paGz"
                   "-gYgl3mrwVbdk0cXX2YvFlZbfL1jeVK3fOeQjiMM0DyDjpjKkHRb--Be1BC_1XIQC5okA1;",
@@ -87,22 +89,15 @@ def send_email():
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
             "from": "Lending Crowd - New Loan Notifier <lendingcrowd@p2pnotifications.live>",
-            "to": ["lendingcrowd@p2pnotifications.live"],
+            "to": ["testing@p2pnotifications.live"],
             "subject": "New Loan Available on Lending Crowd",
-            "text": "Go to https://lendingcrowd.co.nz/investment/loanlistings#lc-wrapper, there are new loans available"
+            "text": "Go to https://lendingcrowd.co.nz, there are new loans available"
         }
     )
 
 
-# TASK THAT REMOVES LOANS FROM TODAY (WE ASSUME LOANS WILL BE FILLED IN 1 DAY)
-def clean_loans():
-    loans_ids = []
-
-
 # TASK TO RETRIEVE NEW LOANS RUN EVERY MINUTE
-def job():
-    print('Running Job. Current DateTime:', datetime.datetime.today())
-
+def get_loans():
     response = send_auth_req()
     c = response.cookies  # RETRIEVE COOKIES INSIDE RESPONSE
 
@@ -110,19 +105,57 @@ def job():
     response = send_loan_query(c)
     json_resp = json.loads(response.text)
 
-    num_loans = json_resp['obj']['totalRecordCount']
+    return json_resp
+
+
+def check_for_new_loans(response):
+    global seen_loan_ids
+
+    # Have we seen it before?
+    loan_not_seen_before = False
+    for loan in response['obj']['list']:
+        if loan['id'] not in seen_loan_ids:
+            seen_loan_ids.append(loan['id'])
+            loan_not_seen_before = True
+
+    return loan_not_seen_before
+
+
+# If the ID of a stored loan doesn't exist in a response,
+# we can assume its been filled and can remove it.
+def remove_old_loans(response):
+    global seen_loan_ids
+    loans_after_removal = []
+
+    for stored_loan_id in seen_loan_ids:
+        in_response = False
+        for loan_from_req in response['obj']['list']:
+            if stored_loan_id == loan_from_req['id']:
+                in_response = True
+                break
+
+        if in_response:
+            loans_after_removal.append(stored_loan_id)
+
+    seen_loan_ids = loans_after_removal
+
+
+def job():
+    print('Running Job. Current DateTime:', datetime.datetime.today())
+
+    response = get_loans()
+    num_loans = response['obj']['totalRecordCount']
 
     if num_loans != 0:
-        new_loan_available = False
-        for loan in json_resp['obj']['list']:
-            print("Found Loan: " + loan)
-            # if loan['id'] not in loans_ids:
-            #     print("New Loan Available - Sending Email")
-            #     loans_ids.append(loan['id'])
-            #     new_loan_available = True
+        loan_not_seen_before = check_for_new_loans(response)
 
-        # if new_loan_available:
-        #     send_email()
+        if loan_not_seen_before:
+            print("Sending Email at", datetime.datetime.today())
+            send_email()
+
+    # Remove old loans
+    remove_old_loans(response)
+    update_cache()
 
 
 # Create on separate thread so clock timed process not altered
@@ -133,8 +166,7 @@ def run_job_in_thread(job_to_run):
 
 
 def schedule_tasks():
-    schedule.every(20).seconds.do(run_job_in_thread, job)
-    schedule.every().day.at('18:00').do(clean_loans)
+    schedule.every(period).seconds.do(run_job_in_thread, job)
 
 
 def execute_tasks():
@@ -142,9 +174,44 @@ def execute_tasks():
         schedule.run_pending()
 
 
+def update_cache():
+    f = open(rel_path, 'w+')
+    for i in range(len(seen_loan_ids)):
+        if i + 1 == len(seen_loan_ids):
+            f.write(str(seen_loan_ids[i]))
+        else:
+            f.write(str(seen_loan_ids[i]) + ",")
+
+    f.close()
+
+
+# Create file if loan cache doesn't exist
+def load_from_cache():
+    f = open(rel_path, 'a+')
+    f.seek(0)
+
+    loan_ids = []
+    if f.read() != '':
+        f.seek(0)
+        for loan_id in f.read().split(','):
+            loan_ids.append(int(loan_id))
+
+    f.close()
+    return loan_ids
+
+
+def init_cache():
+    print("Loading Cache")
+    global seen_loan_ids
+    seen_loan_ids = load_from_cache()
+    print(seen_loan_ids)
+    print("Done.")
+
+
 def main():
+    init_cache()
+
     print('Starting Script')
-    job()
     schedule_tasks()
     execute_tasks()
 

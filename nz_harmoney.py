@@ -159,7 +159,6 @@ def update_cache():
             f.write(str(seen_loan_ids[i]) + ",")
 
     f.close()
-    pass
 
 
 # Create file if loan cache doesn't exist
