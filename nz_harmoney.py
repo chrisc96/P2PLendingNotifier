@@ -51,16 +51,41 @@ def send_loan_query(cookie):
     return requests.request("GET", get_loans_url, cookies=cookie, headers=headers, params=get_loans_querystring)
 
 
-def send_email():
+def build_email_body(loan_details):
+    email_body = "<html>" \
+                 "<p>Hello,</p>" \
+                 "<p>A new loan has just been listed, please sign in and review the loan if you're interested in " \
+                 "investing.</p>" \
+                 "<p>Go to https://www.harmoney.co.nz to log-in and view the new loan</p>"
+
+    email_body += "<br><p><b>Loan Details:</b></p>"
+
+    for loan_info in loan_details:
+        email_body += \
+            "<p>Loan Grade: <b>" + loan_info['grade'] + "</b></p>" \
+            "<p>Interest Rate: <b>" + str(loan_info['interest_rate']) + "% </b></p>" \
+            "<p>Loan Amount :<b> $" + str(loan_info['loan_amount']) + "</b></p>" \
+            "<p>Percentage Funded: <b>" + str(loan_info['percentage_funded']) + "%</b></p>" \
+            "<p>Term Length: <b>" + str(loan_info['term_length']) + "</b></p>" \
+            "<p>Purpose: <b>" + loan_info['purpose'] + "</b></p>"
+
+    email_body += "<br><p>Regards,</p>"
+    email_body += "<p>Chris Connolly</p>"
+    email_body += "</html>"
+
+    return email_body
+
+
+def send_email(loan_details):
+    email_body = build_email_body(loan_details)
     requests.post(
         "https://api.mailgun.net/v3/p2pnotifications.live/messages",
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
-            "from": "Harmoney - New Loan Notifier <harmoney@p2pnotifications.live>",
+            "from": "New Loans <harmoney@p2pnotifications.live>",
             "to": ["testing@p2pnotifications.live"],
-            "subject": "New Loan on Harmoney",
-            "text": "Go to https://www.harmoney.co.nz/lender/portal/invest/marketplace/browse, there are new loans "
-                    "available."
+            "subject": "New Loan Available on Harmoney",
+            "html": email_body
         }
     )
 
@@ -108,6 +133,24 @@ def check_for_new_loans(response):
     return loan_not_seen_before
 
 
+def get_new_loan_details(response):
+    # If we haven't seen it before, return the loan details.
+    new_loan_details = []
+    for loan in response['items']:
+        if loan['id'] not in seen_loan_ids:
+            loan_info = {
+                'grade': loan['grade'],
+                'interest_rate': loan['interest_rate'],
+                'loan_amount': loan['amount'],
+                'term_length': str(loan['term']) + " months",
+                'purpose': loan['loan_purpose'],
+                'percentage_funded': round(float(loan['amount_funded']) / float(loan['amount']) * 100, 2)
+            }
+            new_loan_details.append(loan_info)
+
+    return new_loan_details
+
+
 def job():
     print("Running", service_name, "Job. Current DateTime:", datetime.datetime.today())
 
@@ -118,9 +161,9 @@ def job():
         loan_not_seen_before = check_for_new_loans(response)
 
         if loan_not_seen_before:
+            loan_details = get_new_loan_details(response)
             print("Sending", service_name, "email at", datetime.datetime.today())
-            print(response)
-            send_email()
+            send_email(loan_details)
 
     # Remove old loans
     remove_old_loans(response)
@@ -139,3 +182,13 @@ def init():
 
     # Schedule tasks
     scheduler.schedule_tasks(period, job)
+
+
+def send_test_email():
+    f = open('./samples/nz_harmoney.txt')
+    response = json.load(f)
+    details = get_new_loan_details(response)
+    send_email(details)
+
+
+send_test_email()
