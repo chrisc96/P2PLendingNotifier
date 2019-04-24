@@ -1,0 +1,37 @@
+{
+   'items':[
+      {
+         'id':66043,
+         'name':'LAI-00159982',
+         'amount':11200.0,
+         'interest_rate':25.2,
+         'term':36,
+         'expected_default_rate':1.42,
+         'amount_funded':10650.0,
+         'note_value':25.0,
+         'is_fractionalised':True,
+         'created_date':'2019-04-23T22:23:42.036Z',
+         'funding_amount':10700.0,
+         'has_protect':True,
+         'features':[
+            'protect'
+         ],
+         'expiry_date':'2019-05-08',
+         'loan_purpose':'Other',
+         'grade':'D2',
+         'application_type':'Individual',
+         'bureau_score':716,
+         'already_invested_amount':0,
+         'repayment_to_income_ratio':0.07704432342198478,
+         'monthly_payment':446.76,
+         'borrower':{
+            'residential_status':'Supplied By Employer',
+            'months_at_current_residence':0,
+            'years_at_current_employment':21.0,
+            'age_band':'50-59'
+         },
+         'is_rewrite':False
+      }
+   ],
+   'total_count':1
+}

@@ -146,7 +146,7 @@ def job():
 
     if num_loans != 0:
         loan_not_seen_before = check_for_new_loans(response)
-
+        print(loan_not_seen_before)
         if loan_not_seen_before:
             print("Sending", service_name, "email at", datetime.datetime.today())
             print(response)
@@ -154,7 +154,7 @@ def job():
 
     # Remove old loans
     remove_old_loans(response)
-    cacheing.update_cache()
+    cacheing.update_cache(rel_path, seen_loan_ids)
 
 
 def init():
