@@ -10,7 +10,7 @@ import scheduler
 lc_email = lc_password = ""
 
 # ALG_VARS
-period = 5.0  # Called every 5 seconds
+period = 60.0  # Called every 60 seconds to reduce load
 seen_loan_ids = []
 
 # CACHE STORAGE
