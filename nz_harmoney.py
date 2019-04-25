@@ -9,7 +9,7 @@ import creds_parser
 harmoney_email = harmoney_pwd = ""
 
 # ALG_VARS
-period = 5.0  # Called every 5 seconds
+period = 10.0  # Called every 10 seconds
 seen_loan_ids = []
 
 # CACHE STORAGE
@@ -63,11 +63,14 @@ def build_email_body(loan_details):
     for loan_info in loan_details:
         email_body += \
             "<p>Loan Grade: <b>" + loan_info['grade'] + "</b></p>" \
-            "<p>Interest Rate: <b>" + str(loan_info['interest_rate']) + "% </b></p>" \
-            "<p>Loan Amount :<b> $" + str(loan_info['loan_amount']) + "</b></p>" \
-            "<p>Percentage Funded: <b>" + str(loan_info['percentage_funded']) + "%</b></p>" \
-            "<p>Term Length: <b>" + str(loan_info['term_length']) + "</b></p>" \
-            "<p>Purpose: <b>" + loan_info['purpose'] + "</b></p>"
+                                                        "<p>Interest Rate: <b>" + str(
+                loan_info['interest_rate']) + "% </b></p>" \
+                                              "<p>Loan Amount :<b> $" + str(loan_info['loan_amount']) + "</b></p>" \
+                                                                                                        "<p>Percentage Funded: <b>" + str(
+                loan_info['percentage_funded']) + "%</b></p>" \
+                                                  "<p>Term Length: <b>" + str(loan_info['term_length']) + "</b></p>" \
+                                                                                                          "<p>Purpose: <b>" + \
+            loan_info['purpose'] + "</b></p>"
 
     email_body += "<br><p>Regards,</p>"
     email_body += "<p>Chris Connolly</p>"
@@ -121,23 +124,14 @@ def get_loans():
     return json_resp
 
 
-def check_for_new_loans(response):
+def get_new_loans(response):
     global seen_loan_ids
     # Have we seen it before?
-    loan_not_seen_before = False
-    for loan in response['items']:
-        if loan['id'] not in seen_loan_ids:
-            seen_loan_ids.append(loan['id'])
-            loan_not_seen_before = True
-
-    return loan_not_seen_before
-
-
-def get_new_loan_details(response):
-    # If we haven't seen it before, return the loan details.
+    new_loan_avail = False
     new_loan_details = []
     for loan in response['items']:
         if loan['id'] not in seen_loan_ids:
+            seen_loan_ids.append(loan['id'])
             loan_info = {
                 'grade': loan['grade'],
                 'interest_rate': loan['interest_rate'],
@@ -147,23 +141,22 @@ def get_new_loan_details(response):
                 'percentage_funded': round(float(loan['amount_funded']) / float(loan['amount']) * 100, 2)
             }
             new_loan_details.append(loan_info)
+            new_loan_avail = True
 
-    return new_loan_details
+    return new_loan_avail, new_loan_details
 
 
 def job():
     print("Running", service_name, "Job. Current DateTime:", datetime.datetime.today())
 
     response = get_loans()
-    num_loans = response['total_count']
-    # Loan Available
-    if num_loans != 0:
-        loan_not_seen_before = check_for_new_loans(response)
+    loan_available = response['total_count'] != 0
+    if loan_available:
+        new_loan_avail, new_loan_details = get_new_loans(response)
 
-        if loan_not_seen_before:
-            loan_details = get_new_loan_details(response)
+        if new_loan_avail:
             print("Sending", service_name, "email at", datetime.datetime.today())
-            send_email(loan_details)
+            send_email(new_loan_details)
 
     # Remove old loans
     remove_old_loans(response)
@@ -184,11 +177,11 @@ def init():
     scheduler.schedule_tasks(period, job)
 
 
-def send_test_email():
+def send_test_dict_email():
     f = open('./samples/nz_harmoney.txt')
-    response = json.load(f)
-    details = get_new_loan_details(response)
-    send_email(details)
+    response = eval(f.read().strip())
+    new_loan_avail, new_loan_details = get_new_loans(response)
+    assert new_loan_avail is True and new_loan_details != []
 
 
-send_test_email()
+send_test_dict_email()
