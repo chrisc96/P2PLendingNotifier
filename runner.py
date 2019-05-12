@@ -7,7 +7,7 @@ import bugsnag
 import os
 import time
 
-services = [harmoney_init, lending_crowd_init]
+services = [harmoney_init]
 
 
 def init_bugsnag():
