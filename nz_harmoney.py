@@ -52,7 +52,7 @@ def send_loan_query(cookie):
 
 
 def build_email_body(loan_details):
-    email_body = "<html>" \
+    email_body = "<!DOCTYPE html><html>" \
                  "<p>Hello,</p>" \
                  "<p>A new loan has just been listed, please sign in and review the loan if you're interested in " \
                  "investing.</p>" \
@@ -85,7 +85,7 @@ def send_email(loan_details):
         "https://api.mailgun.net/v3/p2pnotifications.live/messages",
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
-            "from": "New Loans <harmoney@p2pnotifications.live>",
+            "from": "New Loans <harmoneynotifications@p2pnotifications.live>",
             "to": ["testing@p2pnotifications.live"],
             "subject": "New Loan Available on Harmoney",
             "html": email_body
@@ -181,6 +181,7 @@ def send_test_dict_email():
     f = open('./samples/nz_harmoney.txt')
     response = eval(f.read().strip())
     new_loan_avail, new_loan_details = get_new_loans(response)
+    send_email(new_loan_details)
     assert new_loan_avail is True and new_loan_details != []
 
 
