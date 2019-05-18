@@ -1,11 +1,11 @@
-from nz_harmoney import init as harmoney_init
-from nz_lending_crowd import init as lending_crowd_init
-
-from dotenv import load_dotenv
-import scheduler
-import bugsnag
 import os
 import time
+
+import bugsnag
+from dotenv import load_dotenv
+
+import scheduler
+from nz_harmoney import init as harmoney_init
 
 services = [harmoney_init]
 
@@ -29,6 +29,7 @@ def init_notification_services():
 
 def execute_notification_services():
     scheduler.execute_tasks()
+
 
 
 def run():

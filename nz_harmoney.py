@@ -1,6 +1,7 @@
 import datetime
 import json
 
+import environment
 import requests
 import scheduler
 import cacheing
@@ -81,13 +82,15 @@ def build_email_body(loan_details):
 
 def send_email(loan_details):
     email_body = build_email_body(loan_details)
+    who_from, who_to, subject, = environment.get_mail_metadata_from_platform_name(service_name)
+
     requests.post(
         "https://api.mailgun.net/v3/p2pnotifications.live/messages",
         auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
         data={
-            "from": "New Loans <harmoneynotifications@p2pnotifications.live>",
-            "to": ["testing@p2pnotifications.live"],
-            "subject": "New Loan Available on Harmoney",
+            "from": who_from,
+            "to": who_to,
+            "subject": subject,
             "html": email_body
         }
     )
@@ -185,4 +188,4 @@ def send_test_dict_email():
     assert new_loan_avail is True and new_loan_details != []
 
 
-send_test_dict_email()
+# send_test_dict_email()
