@@ -6,6 +6,7 @@ import requests
 import scheduler
 import cacheing
 import creds_parser
+import os
 
 harmoney_email = harmoney_pwd = ""
 
@@ -86,7 +87,7 @@ def send_email(loan_details):
 
     requests.post(
         "https://api.mailgun.net/v3/p2pnotifications.live/messages",
-        auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
+        auth=("api", os.getenv("MG_API_KEY")),
         data={
             "from": who_from,
             "to": who_to,

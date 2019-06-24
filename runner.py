@@ -1,7 +1,7 @@
-import os
 import time
-
 import bugsnag
+import os
+
 from dotenv import load_dotenv
 
 import scheduler
@@ -13,10 +13,7 @@ services = [harmoney_init]
 def init_bugsnag():
     # Exception Handling
     bugsnag.configure(
-        api_key="94ce4de185d75d1385a4b3eaace1996c",
-        project_root="./",
-        notify_release_stages=["production"],
-        release_stage=os.getenv("RELEASE_STAGE") or "production"
+        api_key=os.getenv("BS_API_KEY"),
     )
 
 
@@ -29,7 +26,6 @@ def init_notification_services():
 
 def execute_notification_services():
     scheduler.execute_tasks()
-
 
 
 def run():

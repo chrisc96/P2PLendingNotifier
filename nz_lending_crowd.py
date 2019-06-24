@@ -2,10 +2,12 @@ import datetime
 import json
 
 import requests
+import os
 
 import cacheing
 import creds_parser
 import scheduler
+import environment
 
 lc_email = lc_password = ""
 
@@ -78,13 +80,15 @@ def send_loan_query(cookies):
 
 
 def send_email():
+    who_from, who_to, subject, = environment.get_mail_metadata_from_platform_name(service_name)
+
     requests.post(
         "https://api.mailgun.net/v3/p2pnotifications.live/messages",
-        auth=("api", "1a2813ec74c4f9982f080a41b4c7d19c-985b58f4-5ebf0053"),
+        auth=("api", os.getenv("MG_API_KEY")),
         data={
-            "from": "Lending Crowd - New Loan Notifier <lendingcrowd@p2pnotifications.live>",
-            "to": ["testing@p2pnotifications.live"],
-            "subject": "New Loan Available on Lending Crowd",
+            "from": who_from,
+            "to": who_to,
+            "subject": subject,
             "text": "Go to https://lendingcrowd.co.nz, there are new loans available"
         }
     )
