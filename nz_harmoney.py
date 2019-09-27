@@ -7,6 +7,7 @@ import scheduler
 import cacheing
 import creds_parser
 import os
+import global_vars
 
 harmoney_email = harmoney_pwd = ""
 
@@ -84,18 +85,32 @@ def build_email_body(loan_details):
 def send_email(loan_details):
     email_body = build_email_body(loan_details)
     who_from, who_to, subject, = environment.get_mail_metadata_from_platform_name(service_name)
-
-    requests.post(
-        "https://api.mailgun.net/v3/p2pnotifications.live/messages",
-        auth=("api", os.getenv("MG_API_KEY")),
-        data={
-            "from": who_from,
-            "to": who_to,
-            "subject": subject,
-            "html": email_body
-        }
-    )
-
+    print(who_from, who_to, subject)
+    try:
+        r = requests.post(
+            "https://api.mailgun.net/v3/p2pnotifications.live/messages",
+            auth=("api", os.getenv("MG_API_KEY")),
+            data={
+                "from": who_from,
+                "to": who_to,
+                "subject": subject,
+                "html": email_body
+            }
+        )
+        r.raise_for_status()
+    
+    except requests.exceptions.HTTPError as errh:
+        print ("Http Error:",errh)
+        global_vars.bugsnag_conf.notify(errh)
+    except requests.exceptions.ConnectionError as errc:
+        print ("Error Connecting:",errc)
+        global_vars.bugsnag_conf.notify(errh)
+    except requests.exceptions.Timeout as errt:
+        print ("Timeout Error:",errt)
+        global_vars.bugsnag_conf.notify(errh)
+    except requests.exceptions.RequestException as err:
+        print ("OOps: Something Else",err)
+        global_vars.bugsnag_conf.notify(errh)
 
 # If the ID of a stored loan doesn't exist in a response,
 # we can assume its been filled and can remove it.
@@ -189,4 +204,3 @@ def send_test_dict_email():
     assert new_loan_avail is True and new_loan_details != []
 
 
-# send_test_dict_email()

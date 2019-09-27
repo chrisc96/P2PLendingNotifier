@@ -1,26 +1,19 @@
 import time
-import bugsnag
 import os
 
 from dotenv import load_dotenv
 
 import scheduler
-from nz_harmoney import init as harmoney_init
+import global_vars
+import nz_harmoney as nz_harmoney
 
-services = [harmoney_init]
-
-
-def init_bugsnag():
-    # Exception Handling
-    bugsnag.configure(
-        api_key=os.getenv("BS_API_KEY"),
-    )
+services = [nz_harmoney]
 
 
 # Create each notification system in a new thread
 def init_notification_services():
     for service in services:
-        scheduler.run_job_in_thread(service())
+        scheduler.run_job_in_thread(service.init())
         time.sleep(2)
 
 
@@ -30,7 +23,8 @@ def execute_notification_services():
 
 def run():
     load_dotenv()
-    init_bugsnag()
+    global_vars.init_bugsnag()
+    # services[0].send_test_dict_email()
     init_notification_services()
     execute_notification_services()
 

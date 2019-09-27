@@ -1,12 +1,11 @@
 from enum import Enum
 
-
 class Environment(Enum):
     TESTING = 0,
     PRODUCTION = 1,
 
 
-curr_environment = Environment.TESTING
+curr_environment = Environment.PRODUCTION
 
 
 def get_mail_metadata_from_platform_name(platform_name):
